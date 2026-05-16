@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Dossier // Net-ID Matrix</title>
+    <style>
+        :root {
+            --bg-color: #0a0a12;
+            --panel-bg: rgba(16, 16, 32, 0.75);
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff0055;
+            --text-color: #c4d9f2;
+            --text-dim: #6b7c96;
+            --border-glow: cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            background-image: 
+                linear-gradient(rgba(18, 18, 36, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(18, 18, 36, 0.4) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Scanline Overlay Effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 9999;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Boot Loading Screen */
+        #boot-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #05050a;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .boot-loader {
+            width: 400px;
+            max-width: 100%;
+            font-size: 14px;
+            color: var(--neon-cyan);
+            line-height: 1.5;
+        }
+
+        /* Main HUD Layout */
+        .hud-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        /* Profile Sidebar */
+        .sidebar {
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            padding: 30px;
+            position: relative;
+            height: fit-content;
+        }
+
+        .sidebar::before {
+            content: "ID: 884-AX9";
+            position: absolute;
+            top: -10px; right: 10px;
+            background: var(--bg-color);
+            padding: 0 10px;
+            font-size: 12px;
+            color: var(--neon-magenta);
+        }
+
+        .avatar-frame {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+            border: 2px dashed var(--neon-cyan);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .avatar-placeholder {
+            width: 130px;
+            height: 130px;
+            background: rgba(0, 243, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--neon-cyan);
+            font-weight: bold;
+            font-size: 24px;
+            text-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+        .profile-name {
+            text-align: center;
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-cyan);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .profile-title {
+            text-align: center;
+            color: var(--neon-magenta);
+            font-size: 14px;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+
+        .info-link {
+            display: block;
+            color: var(--text-color);
+            text-decoration: none;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .info-link span {
+            color: var(--neon-cyan);
+        }
+
+        /* Main Content Panel */
+        .main-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-magenta);
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--neon-magenta);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: rgba(255, 0, 85, 0.2);
+            text-shadow: 0 0 8px var(--neon-magenta);
+            border-bottom: 3px solid var(--neon-magenta);
+        }
+
+        /* Display Content */
+        .content-section {
+            padding: 40px;
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+            animation: glitch-reveal 0.4s ease;
+        }
+
+        h2 {
+            color: var(--neon-cyan);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            border-bottom: 1px dashed rgba(0, 243, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        /* Experience Timeline */
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 30px;
+            border-left: 2px solid var(--neon-cyan);
+        }
+
+        .timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -6px; top: 0;
+            width: 10px; height: 10px;
+            background: var(--neon-magenta);
+            box-shadow: 0 0 8px var(--neon-magenta);
+        }
+
+        .time-meta {
+            font-size: 12px;
+            color: var(--neon-magenta);
+            margin-bottom: 5px;
+        }
+
+        .job-title {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .company {
+            color: var(--neon-cyan);
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .job-desc {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        /* Skill Matrix Node */
+        .skill-node {
+            margin-bottom: 20px;
+        }
+
+        .skill-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .skill-bar-bg {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            position: relative;
+        }
+
+        .skill-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan));
+            width: 0%;
+            transition: width 1.5s ease-in-out;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        @keyframes glitch-reveal {
+            0% { opacity: 0; transform: translateY(5px); }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive UI */
+        @media (max-width: 900px) {
+            .hud-container {
+                grid-template-columns: 1fr;
+            }
+            .content-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="boot-screen">
+        <div class="boot-loader" id="boot-text"></div>
+    </div>
+
+    <div class="hud-container" id="main-hud">
+        
+        <aside class="sidebar">
+            <div class="avatar-frame">
+                <div class="avatar-placeholder">[USER_ID]</div>
+            </div>
+            <h1 class="profile-name">ALEX MERCER</h1>
+            <p class="profile-title">// FULL-STACK ARCHITECT</p>
+            
+            <div style="margin-top: 40px;">
+                <a href="mailto:alex.mercer@netspace.io" class="info-link"><span>SYS_EMAIL:</span> alex.mercer@netspace.io</a>
+                <a href="tel:+1234567890" class="info-link"><span>COMMS_NET:</span> +1 (234) 567-890</a>
+                <a href="#" class="info-link"><span>LOC_COORDS:</span> Neo-Boston / Sector 4</a>
+                <a href="https://github.com" target="_blank" class="info-link"><span>MATRIX_HUB:</span> github.com/cyber-dev</a>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <nav class="nav-tabs">
+                <button class="tab-btn active" onclick="switchTab('core-dossier')">Core Dossier</button>
+                <button class="tab-btn" onclick="switchTab('skill-matrix')">Skill Matrix</button>
+                <button class="tab-btn" onclick="switchTab('edu-logs')">Edu Logs</button>
+            </nav>
+
+            <section id="core-dossier" class="content-section active">
+                <h2>Operational Experience</h2>
+                
+                <div class="timeline-item">
+                    <div class="time-meta">2024 - PRESENT // CURRENT CYCLE</div>
+                    <div class="job-title">Senior Cyber-Systems Engineer</div>
+                    <div class="company">Nexus Global Security</div>
+                    <p class="job-desc">Architecting distributed, high-throughput backend arrays. Enhanced operational processing efficiency by 42% across secure mainframe grids. Spearheading modular node structures using localized protocols.</p>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="time-meta">2021 - 2024 // ARCHIVED CYCLE</div>
+                    <div class="job-title">Full Stack Developer</div>
+                    <div class="company">Quantum Tech Labs</div>
+                    <p class="job-desc">Deployed responsive edge applications using synchronized state managers. Maintained secure databanks and oversaw integration layers between legacy mainframes and modern neural networks.</p>
+                </div>
+            </section>
+
+            <section id="skill-matrix" class="content-section">
+                <h2>Technical Infrastructure Capabilities</h2>
+                
+                <div class="skill-node">
+                    <div class="skill-info"><span>JavaScript / TypeScript Engine</span><span>90%</span></div>
+                    <div class="skill-bar-bg"><div class="skill-bar-fill" data-level="90%"></div></div>
+                </div>
+
+                <div class="skill-node">
+                    <div class="skill-info"><span>Node.js / Array Architectures</span><span>85%</span></div>
+                    <div class="skill-bar-bg"><div class="skill-bar-fill" data-level="85%"></div></div>
+                </div>
+
+                <div class="skill-node">
+                    <div class="skill-info"><span>React / Matrix Viewports</span><span>80%</span></div>
+                    <div class="skill-bar-bg"><div class="skill-bar-fill" data-level="80%"></div></div>
+                </div>
+
+                <div class="skill-node">
+                    <div class="skill-info"><span>Cyber Security Protocol / IAM</span><span>75%</span></div>
+                    <div class="skill-bar-bg"><div class="skill-bar-fill" data-level="75%"></div></div>
+                </div>
+            </section>
+
+            <section id="edu-logs" class="content-section">
+                <h2>Educational Record Logs</h2>
+                
+                <div class="timeline-item">
+                    <div class="time-meta">GRAD_YEAR: 2021</div>
+                    <div class="job-title">B.S. in Cybernetic Science & Computing</div>
+                    <div class="company">Neo-Tokyo Institute of Technology</div>
+                    <p class="job-desc">Specialized in algorithmic vector analysis, neural mesh distribution networks, and advanced discrete data parsing structures.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Terminal Simulated Booting Sequence
+        const bootLines = [
+            "INITIALIZING NETWORK PROTOCOLS...",
+            "ESTABLISHING SECURE QUANTUM LINK...",
+            "DECRYPTING DOSSIER MATRIX [USER_ID: 884-AX9]...",
+            "BYPASSING FIREWALL LAYERS...",
+            "DECRYPTION SUCCESSFUL. INITIALIZING DISPLAY..."
+        ];
+
+        let lineIndex = 0;
+        const bootTextDiv = document.getElementById("boot-text");
+
+        function printBootLine() {
+            if (lineIndex < bootLines.length) {
+                bootTextDiv.innerHTML += `> ${bootLines[lineIndex]}<br><br>`;
+                lineIndex++;
+                setTimeout(printBootLine, 400);
+            } else {
+                setTimeout(() => {
+                    document.getElementById("boot-screen").style.display = "none";
+                    const hud = document.getElementById("main-hud");
+                    hud.style.opacity = "1";
+                    // Trigger skills animation if user is initially on that tab
+                    animateSkills();
+                }, 600);
+            }
+        }
+
+        // Run boot sequence on window load
+        window.onload = printBootLine;
+
+        // Nav Tab Switcher Engine
+        function switchTab(tabId) {
+            // Remove active classes
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Add active classes
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if(tabId === 'skill-matrix') {
+                animateSkills();
+            } else {
+                resetSkills();
+            }
+        }
+
+        // Skill Array Fill Animation
+        function animateSkills() {
+            document.querySelectorAll('.skill-bar-fill').forEach(bar => {
+                const targetWidth = bar.getAttribute('data-level');
+                bar.style.width = targetWidth;
+            });
+        }
+
+        function resetSkills() {
+            document.querySelectorAll('.skill-bar-fill').forEach(bar => {
+                bar.style.width = '0%';
+            });
+        }
+    </script>
+</body>
+</html>
